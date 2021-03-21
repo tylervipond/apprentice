@@ -1,0 +1,32 @@
+name: deployment workflow
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Use Wasm-pack
+        uses: jetli/wasm-pack-action@v0.3.0
+        with:
+          version: 'latest'
+      - name: Use Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      - run: npm install
+      - run: npm run build
+      - name: Deploy to netlify
+        uses: netlify/actions/cli@master
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.DEV_NETLIFY_SITE_ID }}
+        with:
+          args: deploy --dir=dist --prod
+          secrets: '["NETLIFY_AUTH_TOKEN", "NETLIFY_SITE_ID"]'
