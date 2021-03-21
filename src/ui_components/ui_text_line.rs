@@ -1,14 +1,14 @@
 use super::Style;
 use rltk::{Rltk, RGB};
 
-pub struct UITextLine<T: ToString + Copy> {
+pub struct UITextLine<T: ToString> {
     x: i32,
     y: i32,
     text: T,
     style: Style,
 }
 
-impl<T: ToString + Copy> UITextLine<T> {
+impl<T: ToString> UITextLine<T> {
     pub fn new(x: i32, y: i32, text: T, style: Option<Style>) -> Self {
         let style = match style {
             Some(s) => s,
@@ -26,7 +26,7 @@ impl<T: ToString + Copy> UITextLine<T> {
             self.y,
             RGB::named(self.style.fg),
             RGB::named(self.style.bg),
-            self.text,
+            self.text.to_string(),
         );
     }
 }

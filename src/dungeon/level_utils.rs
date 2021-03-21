@@ -16,6 +16,17 @@ pub fn add_xy_to_idx(width: i32, x: i32, y: i32, idx: i32) -> i32 {
     idx + x + width * y
 }
 
+pub fn idxs_are_adjacent(width: u8, idx1: usize, idx2: usize) -> bool {
+    idx1 == idx2 + 1
+        || idx1 == idx2 - 1
+        || idx1 == idx2 + width as usize
+        || idx1 == idx2 - width as usize
+        || idx1 == idx2 + 1 + width as usize
+        || idx1 == idx2 - 1 + width as usize
+        || idx1 == idx2 + 1 - width as usize
+        || idx1 == idx2 - 1 - width as usize
+}
+
 pub fn idx_point(width: u32, idx: usize) -> Point {
     let (x, y) = idx_xy(width, idx);
     Point::new(x, y)

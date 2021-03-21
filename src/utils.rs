@@ -1,6 +1,6 @@
-use crate::{components::position::Position, dungeon::{dungeon::Dungeon, level_utils}};
+use crate::components::position::Position;
 use rltk::RandomNumberGenerator;
-use specs::{Component, Entity, World, WorldExt};
+use specs::{Entity, World, WorldExt};
 
 pub fn get_random_between_numbers(rng: &mut RandomNumberGenerator, n1: i32, n2: i32) -> i32 {
     n1 + rng.roll_dice(1, i32::abs(n2 - n1))
@@ -42,33 +42,4 @@ pub fn select_previous_idx(idx: usize, length: usize) -> usize {
         return length - 1;
     }
     idx - 1
-}
-
-fn get_entity_at_idx(
-    world: &World,
-    idx: usize,
-    level_number: u8,
-    filter: impl Fn(Entity) -> bool,
-) -> Option<Entity> {
-    let dungeon = world.fetch::<Dungeon>();
-    let level = dungeon.get_level(level_number).unwrap();
-    let entities = level_utils::entities_at_idx(level, idx);
-    entities
-        .iter()
-        .filter(|e| filter(**e))
-        .map(|e| e.to_owned())
-        .next()
-}
-
-fn get_entity_with_component_at_idx<T: Component>(
-    world: &mut World,
-    idx: usize,
-    level_number: u8,
-) -> Option<Entity> {
-    let storage = world.read_storage::<T>();
-    let filter = |e| match storage.get(e) {
-        Some(_) => true,
-        _ => false,
-    };
-    get_entity_at_idx(world, idx, level_number, filter)
 }

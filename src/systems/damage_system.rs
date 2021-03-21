@@ -1,4 +1,11 @@
-use crate::{components::{CombatStats, Container, DamageHistory, Equipment, Hiding, Inventory, Monster, Name, Player, Position, Renderable, SufferDamage, Viewshed, monster::MonsterSpecies}, player::InteractionType, services::{BloodSpawner, CorpseSpawner, DebrisSpawner, GameLog}};
+use crate::{
+    components::{
+        monster::MonsterSpecies, CombatStats, Container, DamageHistory, Equipment, Hiding,
+        Inventory, Monster, Name, Player, Position, Renderable, SufferDamage, Viewshed,
+    },
+    interaction_type::InteractionType,
+    services::{BloodSpawner, CorpseSpawner, DebrisSpawner, GameLog},
+};
 use rltk::RGB;
 use specs::{
     Entities, Entity, Join, ReadExpect, ReadStorage, System, World, WorldExt, WriteExpect,
@@ -6,7 +13,7 @@ use specs::{
 };
 
 pub struct DamageSystem<'a> {
-    pub queued_action: &'a mut Option<(Entity, InteractionType)>,
+    pub queued_action: &'a mut Option<InteractionType>,
 }
 
 impl<'a> DamageSystem<'a> {
@@ -67,7 +74,7 @@ impl<'a> DamageSystem<'a> {
                         35,
                         position.level,
                         format!("{} debris", name.name),
-                        true
+                        true,
                     );
                     if visible_to_player {
                         log.add(format!("{} has been destroyed", name.name));

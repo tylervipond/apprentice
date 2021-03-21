@@ -57,6 +57,13 @@ impl ControlScheme {
         to_string_pretty(self, my_config).unwrap()
     }
 
+    fn from_ron_string(controls_str: &str) -> Self {
+        match from_str::<Self>(controls_str) {
+            Ok(controls) => controls,
+            _ => Self::default(),
+        }
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     pub fn save(&self) {
         DirBuilder::new()
@@ -83,7 +90,7 @@ impl ControlScheme {
         if let Ok(mut settings_file) = File::open(get_settings_filepath()) {
             let mut settings = String::new();
             if let Ok(_) = settings_file.read_to_string(&mut settings) {
-                return from_str::<Self>(settings.as_str()).unwrap();
+                return Self::from_ron_string(settings.as_str());
             }
         }
         Self::default()
@@ -95,7 +102,7 @@ impl ControlScheme {
         let storage = window.local_storage().unwrap().expect("no local storage");
         match storage.get_item("key-bindings.ron") {
             Ok(r) => match r {
-                Some(controls_string) => from_str::<Self>(controls_string.as_str()).unwrap(),
+                Some(controls_string) => Self::from_ron_string(controls_string.as_str()),
                 _ => Self::default(),
             },
             _ => Self::default(),
