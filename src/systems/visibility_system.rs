@@ -1,7 +1,7 @@
 use crate::dungeon::{dungeon::Dungeon, level_utils};
 use crate::{
     components::{Monster, Position, Viewshed},
-    player::InteractionType,
+    interaction_type::InteractionType,
 };
 use specs::{Entities, Entity, Join, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
 use std::collections::HashSet;

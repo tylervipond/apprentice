@@ -29,6 +29,12 @@ pub enum RunState {
         range: u32,
         item: Entity,
     },
+    InteractAtIdx {
+        idx: usize,
+        target_menu_idx: usize,
+        interaction_menu_idx: usize,
+        interaction_menu_active: bool
+    },
     InteractionTypeEntityTargeting {
         target_idx: usize,
         targets: Box<[Entity]>,

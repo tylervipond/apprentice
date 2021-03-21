@@ -10,7 +10,7 @@
 				input: Key(O),
 			): ShowEquipmentMenu,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(E),
 			): MoveUpRight,
 			(
@@ -54,15 +54,15 @@
 				input: Key(H),
 			): SearchHidden,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(Q),
 			): MoveUpLeft,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(A),
 			): MoveLeft,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(X),
 			): MoveDown,
 			(
@@ -78,7 +78,7 @@
 				input: Key(J),
 			): Hide,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(D),
 			): MoveRight,
 			(
@@ -86,7 +86,7 @@
 				input: Key(T),
 			): DisarmTrap,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(C),
 			): MoveDownRight,
 			(
@@ -94,7 +94,7 @@
 				input: Key(Left),
 			): ScrollLeft,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(W),
 			): MoveUp,
 			(
@@ -114,9 +114,73 @@
 				input: Key(Up),
 			): ScrollUp,
 			(
-				modifier: None,
+				modifier: Some(Shift),
 				input: Key(Z),
 			): MoveDownLeft,
+			(
+				modifier: None,
+				input: Key(Z),
+			): AutoActDownLeft,
+			(
+				modifier: None,
+				input: Key(W),
+			): AutoActUp,
+			(
+				modifier: None,
+				input: Key(C),
+			): AutoActDownRight,
+			(
+				modifier: None,
+				input: Key(D),
+			): AutoActRight,
+			(
+				modifier: None,
+				input: Key(Q),
+			): AutoActUpLeft,
+			(
+				modifier: None,
+				input: Key(A),
+			): AutoActLeft,
+			(
+				modifier: None,
+				input: Key(X),
+			): AutoActDown,
+			(
+				modifier: None,
+				input: Key(E),
+			): AutoActUpRight,
+			(
+				modifier: Some(Control),
+				input: Key(Z),
+			): ActDownLeft,
+			(
+				modifier: Some(Control),
+				input: Key(W),
+			): ActUp,
+			(
+				modifier: Some(Control),
+				input: Key(C),
+			): ActDownRight,
+			(
+				modifier: Some(Control),
+				input: Key(D),
+			): ActRight,
+			(
+				modifier: Some(Control),
+				input: Key(Q),
+			): ActUpLeft,
+			(
+				modifier: Some(Control),
+				input: Key(A),
+			): ActLeft,
+			(
+				modifier: Some(Control),
+				input: Key(X),
+			): ActDown,
+			(
+				modifier: Some(Control),
+				input: Key(E),
+			): ActUpRight,
 		},
 	),
 	menu: (

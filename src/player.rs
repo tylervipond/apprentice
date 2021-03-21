@@ -1,6 +1,13 @@
-use crate::components::{Container, Disarmable, Door, HidingSpot, Item, Monster, Position, Trap, WantsToCloseDoor, WantsToDisarmTrap, WantsToDouse, WantsToEquip, WantsToExit, WantsToGoDownStairs, WantsToGoUpStairs, WantsToGrab, WantsToHide, WantsToLight, WantsToMelee, WantsToMove, WantsToOpenDoor, WantsToPickUpItem, WantsToReleaseGrabbed, WantsToSearchHidden, WantsToTrap, WantsToUse, door::DoorState, equipable::EquipmentPositions};
+use crate::components::{
+    door::DoorState, equipable::EquipmentPositions, BlocksTile, Container, Disarmable, Door,
+    Grabbing, Hidden, HidingSpot, Item, Monster, Position, Trap, WantsToCloseDoor,
+    WantsToDisarmTrap, WantsToDouse, WantsToEquip, WantsToGoDownStairs, WantsToGoUpStairs,
+    WantsToGrab, WantsToHide, WantsToLight, WantsToMelee, WantsToMove, WantsToOpenDoor,
+    WantsToPickUpItem, WantsToReleaseGrabbed, WantsToSearchHidden, WantsToTrap, WantsToUse,
+};
 use crate::dungeon::{dungeon::Dungeon, level_utils};
 use crate::entity_option::EntityOption;
+use crate::interaction_type::InteractionType;
 use specs::{Component, Entity, World, WorldExt};
 use std::collections::HashSet;
 
@@ -138,31 +145,6 @@ pub fn go_down_stairs(world: &mut World, idx: usize) {
         .expect("Unable to insert want to go down stairs");
 }
 
-pub fn exit_dungeon(world: &mut World, idx: usize) {
-    insert_intent(world, WantsToExit { idx }).expect("Unable to insert want to pick up");
-}
-
-#[derive(Copy, Clone, PartialEq)]
-pub enum InteractionType {
-    Douse(Entity),
-    Light(Entity),
-    HideIn(Entity),
-    Attack(Entity),
-    Grab(Entity),
-    // Release,
-    Disarm(Entity),
-    Arm(Entity),
-    // Use,
-    GoUp(usize),
-    GoDown(usize),
-    Move(usize),
-    Exit(usize),
-    Pickup(Entity),
-    OpenDoor(Entity),
-    CloseDoor(Entity),
-    OpenContainer(Entity),
-}
-
 pub fn interact(world: &mut World, interaction_type: InteractionType) {
     match interaction_type {
         InteractionType::Douse(ent) => douse_item(world, ent),
@@ -178,14 +160,29 @@ pub fn interact(world: &mut World, interaction_type: InteractionType) {
         InteractionType::GoDown(idx) => go_down_stairs(world, idx),
         InteractionType::GoUp(idx) => go_up_stairs(world, idx),
         InteractionType::Move(idx) => move_to_position(world, idx),
+        InteractionType::Release => release_entity(world),
         _ => {}
     }
 }
 
-fn get_entity_with_component<T: Component>(world: &World, ents: &Vec<Entity>) -> Option<Entity> {
+fn get_entity_is_visible_to_player(world: &World, entity: &Entity) -> bool {
+    let hidden_storage = world.read_storage::<Hidden>();
+    let player_ent = world.fetch::<Entity>();
+    match hidden_storage.get(*entity) {
+        Some(hidden) => hidden.found_by.contains(&*player_ent),
+        None => true,
+    }
+}
+
+fn get_entity_with_component_for_auto_act<T: Component>(
+    world: &World,
+    ents: &Vec<Entity>,
+) -> Option<Entity> {
     let component_storage = world.read_storage::<T>();
     ents.iter()
-        .filter(|e| component_storage.get(**e).is_some())
+        .filter(|e| {
+            component_storage.get(**e).is_some() && get_entity_is_visible_to_player(world, e)
+        })
         .map(|e| *e)
         .next()
 }
@@ -204,45 +201,51 @@ fn get_open_door_entity_at_idx(world: &World, ents: &Vec<Entity>) -> Option<Enti
         .next()
 }
 // this returns interaction type
-pub fn get_default_action(world: &mut World, delta_x: i32, delta_y: i32) -> InteractionType {
-    let (ents, stairs_up_idx, stairs_down_idx, exit_idx, destination_index) = {
-        let positions = world.read_storage::<Position>();
-        let player_entity = world.fetch::<Entity>();
-        let player_position = positions.get(*player_entity).unwrap();
-        let floor = player_position.level;
-        let dungeon = world.fetch::<Dungeon>();
-        let level = dungeon.get_level(floor).unwrap();
-        let level_width = level.width as i32;
-        let destination_index = level_utils::add_xy_to_idx(
-            level_width as i32,
-            delta_x as i32,
-            delta_y as i32,
-            player_position.idx as i32,
-        ) as usize;
-        (
-            level.tile_content[destination_index].clone(),
-            level.stairs_up,
-            level.stairs_down,
-            level.exit,
-            destination_index,
-        )
-    };
-    if let Some(e) = get_entity_with_component::<Container>(world, &ents) {
-        return InteractionType::OpenContainer(e);
+pub fn get_default_action(world: &World, delta_x: i32, delta_y: i32) -> InteractionType {
+    let positions = world.read_storage::<Position>();
+    let player_entity = world.fetch::<Entity>();
+    let player_position = positions.get(*player_entity).unwrap();
+    let floor = player_position.level;
+    let dungeon = world.fetch::<Dungeon>();
+    let level = dungeon.get_level(floor).unwrap();
+    let level_width = level.width as i32;
+    let destination_index = level_utils::add_xy_to_idx(
+        level_width as i32,
+        delta_x as i32,
+        delta_y as i32,
+        player_position.idx as i32,
+    ) as usize;
+    let ents = &level.tile_content[destination_index];
+    let stairs_up_idx = level.stairs_up;
+    let stairs_down_idx = level.stairs_down;
+    let exit_idx = level.exit;
+
+    if let Some(e) = get_entity_with_component_for_auto_act::<Container>(world, &ents) {
+        let blocks_storage = world.read_storage::<BlocksTile>();
+        if blocks_storage.get(e).is_some() {
+            return InteractionType::OpenContainer(e);
+        }
     }
-    if let Some(e) = get_entity_with_component::<HidingSpot>(world, &ents) {
-        return InteractionType::HideIn(e);
+    if let Some(e) = get_entity_with_component_for_auto_act::<HidingSpot>(world, &ents) {
+        let grabbing_storage = world.read_storage::<Grabbing>();
+        let grabbed = match grabbing_storage.get(*player_entity) {
+            Some(grabbing) => grabbing.thing == e,
+            None => false
+        };
+        if !grabbed {
+            return InteractionType::HideIn(e);
+        }
     }
     if let Some(e) = get_open_door_entity_at_idx(world, &ents) {
         return InteractionType::OpenDoor(e);
     }
-    if let Some(e) = get_entity_with_component::<Monster>(world, &ents) {
+    if let Some(e) = get_entity_with_component_for_auto_act::<Monster>(world, &ents) {
         return InteractionType::Attack(e);
     }
-    if let Some(e) = get_entity_with_component::<Disarmable>(world, &ents) {
+    if let Some(e) = get_entity_with_component_for_auto_act::<Disarmable>(world, &ents) {
         return InteractionType::Disarm(e);
     }
-    if let Some(e) = get_entity_with_component::<Item>(world, &ents) {
+    if let Some(e) = get_entity_with_component_for_auto_act::<Item>(world, &ents) {
         return InteractionType::Pickup(e);
     }
     let idx_is_stairs_down = match stairs_down_idx {

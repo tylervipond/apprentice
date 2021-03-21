@@ -1,11 +1,14 @@
-use crate::{components::{Position, Hidden, Name, Viewshed}, player::InteractionType};
 use crate::dungeon::{dungeon::Dungeon, level_utils};
 use crate::services::GameLog;
+use crate::{
+    components::{Hidden, Name, Position, Viewshed},
+    interaction_type::InteractionType,
+};
 use rltk::RandomNumberGenerator;
 use specs::{Entity, ReadExpect, ReadStorage, System, WriteExpect, WriteStorage};
 
 pub struct RevealTrapsSystem<'a> {
-    pub queued_action: &'a mut Option<InteractionType>
+    pub queued_action: &'a mut Option<InteractionType>,
 }
 
 impl<'a> System<'a> for RevealTrapsSystem<'a> {
@@ -21,16 +24,7 @@ impl<'a> System<'a> for RevealTrapsSystem<'a> {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (
-            viewsheds,
-            positions,
-            dungeon,
-            player_ent,
-            mut hidden,
-            mut rng,
-            names,
-            mut log,
-        ) = data;
+        let (viewsheds, positions, dungeon, player_ent, mut hidden, mut rng, names, mut log) = data;
         let dungeon_level = positions.get(*player_ent).unwrap();
         let level = dungeon.get_level(dungeon_level.level).unwrap();
         let player_viewshed = viewsheds.get(*player_ent).unwrap();

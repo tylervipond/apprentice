@@ -9,7 +9,7 @@ use crate::{
         Triggered, Viewshed, WantsToCloseDoor, WantsToDisarmTrap, WantsToDouse, WantsToDropItem,
         WantsToEquip, WantsToExit, WantsToGoDownStairs, WantsToGrab, WantsToHide, WantsToLight,
         WantsToMelee, WantsToMove, WantsToOpenDoor, WantsToPickUpItem, WantsToReleaseGrabbed,
-        WantsToSearchHidden, WantsToTrap, WantsToUse,
+        WantsToSearchHidden, WantsToTrap, WantsToUse,WantsToGoUpStairs
     },
     services::{
         BloodSpawner, CorpseSpawner, DebrisSpawner, GameLog, ItemSpawner, ParticleEffectSpawner,
@@ -130,7 +130,7 @@ pub fn get_world() -> World {
     world.register::<WantsToOpenDoor>();
     world.register::<WantsToCloseDoor>();
     world.register::<WantsToGoDownStairs>();
-    world.register::<WantsToGoDownStairs>();
+    world.register::<WantsToGoUpStairs>();
     world.register::<WantsToExit>();
     world.register::<Door>();
     world.register::<Furniture>();
@@ -155,8 +155,7 @@ pub fn get_world() -> World {
     world.insert(GameLog {
         entries: vec!["Enter the dungeon apprentice! Bring back the Talisman!".to_owned()],
     }); // This needs to get moved to a continue game function I think...
-    let rng = RandomNumberGenerator::new();
-    world.insert(rng);
+    world.insert(RandomNumberGenerator::new());
     world.insert(ParticleEffectSpawner::new());
     world.insert(BloodSpawner::new());
     world.insert(DebrisSpawner::new());

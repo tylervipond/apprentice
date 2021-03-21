@@ -3,22 +3,21 @@ use crate::debug;
 use crate::{
     components::{
         door::DoorState, equipable::EquipmentPositions, Armable, CombatStats, Container,
-        Disarmable, Door, Dousable, Equipable, Equipment, Grabbable, Hidden, HidingSpot, Info,
-        Inventory, Item, Lightable, Name, Objective, Position, Ranged, Trap, Viewshed,
+        Disarmable, Door, Dousable, Equipable, Equipment, Grabbable, Grabbing, Hidden, HidingSpot,
+        Info, Inventory, Item, Lightable, Name, Objective, Position, Ranged, Trap, Viewshed,
         WantsToDropItem,
     },
     copy,
-    dungeon::{dungeon::Dungeon, level_builders, tile_type::TileType},
+    dungeon::{dungeon::Dungeon, level_builders, level_utils, tile_type::TileType},
+    interaction_type::InteractionType,
     inventory,
     menu::{Menu, MenuOption, MenuOptionState},
-    persistence, player,
-    player::InteractionType,
-    ranged,
+    patches, persistence, player, ranged,
     run_state::{RunState, TargetIntent},
     screens::{
         ScreenCredits, ScreenDeath, ScreenFailure, ScreenIntro, ScreenLoading, ScreenMainMenu,
-        ScreenMapGeneric, ScreenMapInteractMenu, ScreenMapInteractTarget, ScreenMapItemMenu,
-        ScreenMapMenu, ScreenMapTargeting, ScreenNewGame, ScreenOptions, ScreenSaving,
+        ScreenMapGeneric, ScreenMapInteractMenu, ScreenMapInteractTarget, ScreenMapMenu,
+        ScreenMapNestedMenu, ScreenMapTargeting, ScreenNewGame, ScreenOptions, ScreenSaving,
         ScreenSetKey, ScreenSuccess,
     },
     services::GameLog,
@@ -41,13 +40,14 @@ use crate::{
     },
     utils, world_utils,
 };
-use rltk::{a_star_search, GameState, RandomNumberGenerator, Rltk};
+use rltk::{GameState, NavigationPath, RandomNumberGenerator, Rltk, a_star_search};
 use specs::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     iter,
     iter::FromIterator,
     iter::IntoIterator,
+    path::Path,
 };
 
 fn player_can_leave_dungeon(world: &mut World) -> bool {
@@ -109,6 +109,27 @@ fn get_visible_entities(world: &World) -> Box<[Entity]> {
         .map(|e| *e)
         .collect()
 }
+fn get_visible_entities_at_idx(world: &World, idx: usize) -> Box<[Entity]> {
+    let player_ent = world.fetch::<Entity>();
+    let viewsheds = world.read_storage::<Viewshed>();
+    let positions = world.read_storage::<Position>();
+    let player_position = positions.get(*player_ent).unwrap();
+    let dungeon = world.fetch::<Dungeon>();
+    let level = dungeon.get_level(player_position.level).unwrap();
+    let hiddens = world.read_storage::<Hidden>();
+
+    level
+        .tile_content
+        .get(idx)
+        .unwrap()
+        .iter()
+        .filter(|e| match hiddens.get(**e) {
+            Some(hidden) => hidden.found_by.contains(&*player_ent),
+            None => true,
+        })
+        .map(|e| *e)
+        .collect()
+}
 
 fn get_openable_doors(world: &World, entities: Box<[Entity]>) -> Box<[Entity]> {
     let doors = world.read_storage::<Door>();
@@ -135,8 +156,7 @@ fn get_interaction_type_targets<T: Component>(world: &World) -> Box<[Entity]> {
     filter_for_component::<T>(world, get_visible_entities(world))
 }
 
-fn get_interaction_targets(world: &World) -> Box<[Entity]> {
-    let visible_entities = get_visible_entities(world);
+fn filter_targets_are_interactable(world: &World, targets: Box<[Entity]>) -> Box<[Entity]> {
     let grabbables = world.read_storage::<Grabbable>();
     let lightables = world.read_storage::<Lightable>();
     let dousables = world.read_storage::<Dousable>();
@@ -146,7 +166,7 @@ fn get_interaction_targets(world: &World) -> Box<[Entity]> {
     let containers = world.read_storage::<Container>();
     let items = world.read_storage::<Item>();
     let doors = world.read_storage::<Door>();
-    visible_entities
+    targets
         .iter()
         .filter(|e| {
             grabbables.get(**e).is_some()
@@ -163,6 +183,14 @@ fn get_interaction_targets(world: &World) -> Box<[Entity]> {
         .collect()
 }
 
+fn get_interaction_targets(world: &World) -> Box<[Entity]> {
+    filter_targets_are_interactable(world, get_visible_entities(world))
+}
+
+fn get_interaction_targets_at_idx(world: &World, idx: usize) -> Box<[Entity]> {
+    filter_targets_are_interactable(world, get_visible_entities_at_idx(world, idx))
+}
+
 fn get_interaction_options_for_target(world: &World, target: Entity) -> Vec<InteractionType> {
     let mut interactions: Vec<InteractionType> = vec![];
     if world.read_storage::<Disarmable>().get(target).is_some() {
@@ -177,7 +205,14 @@ fn get_interaction_options_for_target(world: &World, target: Entity) -> Vec<Inte
     if world.read_storage::<Lightable>().get(target).is_some() {
         interactions.push(InteractionType::Light(target));
     }
-    if world.read_storage::<Grabbable>().get(target).is_some() {
+    let player_ent = *(world.fetch::<Entity>());
+    let releasable = match world.read_storage::<Grabbing>().get(player_ent) {
+        Some(grabbing) => grabbing.thing == target,
+        None => false,
+    };
+    if releasable {
+        interactions.push(InteractionType::Release)
+    } else if world.read_storage::<Grabbable>().get(target).is_some() {
         interactions.push(InteractionType::Grab(target));
     }
     if world.read_storage::<HidingSpot>().get(target).is_some() {
@@ -209,28 +244,29 @@ fn get_menu_from_interaction_options(
         .iter()
         .enumerate()
         .map(|(idx, interaction_type)| {
-            let name = match interaction_type {
-                InteractionType::Disarm(_) => copy::MENU_OPTION_DISARM,
-                InteractionType::Arm(_) => copy::MENU_OPTION_ARM,
-                InteractionType::Douse(_) => copy::MENU_OPTION_DOUSE,
-                InteractionType::Light(_) => copy::MENU_OPTION_LIGHT,
-                InteractionType::Grab(_) => copy::MENU_OPTION_GRAB,
-                InteractionType::HideIn(_) => copy::MENU_OPTION_HIDE,
-                InteractionType::Attack(_) => copy::MENU_OPTION_ATTACK,
-                InteractionType::Pickup(_) => copy::MENU_OPTION_PICKUP,
-                InteractionType::OpenContainer(_) => copy::MENU_OPTION_OPEN,
-                InteractionType::OpenDoor(_) => copy::MENU_OPTION_OPEN_DOOR,
-                InteractionType::CloseDoor(_) => copy::MENU_OPTION_CLOSE_DOOR,
-                InteractionType::GoDown(_) => copy::MENU_OPTION_GO_DOWN,
-                InteractionType::GoUp(_) => copy::MENU_OPTION_GO_UP,
-                InteractionType::Exit(_) => copy::MENU_OPTION_EXIT,
-                InteractionType::Move(_) => copy::MENU_OPTION_MOVE,
-            };
+            let name = interaction_type.short_text();
             let state = match idx == highlighted {
                 true => MenuOptionState::Highlighted,
                 false => MenuOptionState::Normal,
             };
             MenuOption::new(name, state)
+        })
+        .collect();
+    Menu::new(options, 10)
+}
+
+fn get_menu_from_ents(world: &World, ents: &Box<[Entity]>, highlight_idx: usize) -> Menu<String> {
+    let names = world.read_storage::<Name>();
+    let options: Box<[MenuOption<String>]> = ents
+        .iter()
+        .enumerate()
+        .map(|(idx, e)| {
+            let name = names.get(*e).unwrap();
+            let state = match highlight_idx == idx {
+                true => MenuOptionState::Highlighted,
+                false => MenuOptionState::Normal,
+            };
+            MenuOption::new(name.name.clone().to_owned(), state)
         })
         .collect();
     Menu::new(options, 10)
@@ -286,31 +322,69 @@ fn initialize_new_game(world: &mut World) {
     world.insert(dungeon);
 }
 
-fn handle_default_move(world: &mut World, delta_x: i32, delta_y: i32) -> RunState {
+fn handle_auto_act(world: &mut World, delta_x: i32, delta_y: i32) -> RunState {
     let interaction = player::get_default_action(world, delta_x, delta_y);
     match interaction {
-        InteractionType::Douse(_)
-        | InteractionType::Light(_)
-        | InteractionType::HideIn(_)
-        | InteractionType::Grab(_)
-        | InteractionType::Disarm(_)
-        | InteractionType::Arm(_)
-        | InteractionType::Attack(_)
-        | InteractionType::Pickup(_)
-        | InteractionType::OpenDoor(_)
-        | InteractionType::CloseDoor(_)
-        | InteractionType::GoDown(_)
-        | InteractionType::GoUp(_)
-        | InteractionType::Move(_) => {
-            player::interact(world, interaction);
-            RunState::PlayerTurn
-        }
         InteractionType::OpenContainer(e) => RunState::OpenContainerMenu {
             highlighted: 0,
             container: e,
         },
         InteractionType::Exit(_) => RunState::ExitGameMenu { highlighted: 0 },
+        _ => {
+            player::interact(world, interaction);
+            RunState::PlayerTurn
+        }
     }
+}
+
+fn get_idx_from_delta(world: &World, delta_x: i32, delta_y: i32) -> usize {
+    let positions = world.read_storage::<Position>();
+    let player_entity = world.fetch::<Entity>();
+    let player_position = positions.get(*player_entity).unwrap();
+    let floor = player_position.level;
+    let dungeon = world.fetch::<Dungeon>();
+    let level = dungeon.get_level(floor).unwrap();
+    let level_width = level.width as i32;
+    level_utils::add_xy_to_idx(
+        level_width as i32,
+        delta_x as i32,
+        delta_y as i32,
+        player_position.idx as i32,
+    ) as usize
+}
+
+pub fn handle_move(world: &mut World, delta_x: i32, delta_y: i32) -> RunState {
+    let destination_idx = get_idx_from_delta(world, delta_x, delta_y);
+    player::move_to_position(world, destination_idx);
+    RunState::PlayerTurn
+}
+
+pub fn handle_act(world: &mut World, delta_x: i32, delta_y: i32) -> RunState {
+    let destination_idx = get_idx_from_delta(world, delta_x, delta_y);
+    let targets = get_interaction_targets_at_idx(world, destination_idx);
+    if targets.len() == 0 {
+        return RunState::AwaitingInput {
+            offset_x: 0,
+            offset_y: 0,
+        };
+    }
+    RunState::InteractAtIdx {
+        idx: destination_idx,
+        interaction_menu_idx: 0,
+        target_menu_idx: 0,
+        interaction_menu_active: false,
+    }
+}
+
+fn get_player_path_to_target(world: &World, target_idx: usize) -> NavigationPath {
+    let player_entity = world.fetch::<Entity>();
+    let positions = world.read_storage::<Position>();
+
+    let player_position = positions.get(*player_entity).unwrap();
+    let dungeon = world.fetch::<Dungeon>();
+    let level = dungeon.get_level(player_position.level).unwrap();
+    // this should be updated to only search tiles that the player has seen.
+    a_star_search(player_position.idx as i32, target_idx as i32, level)
 }
 
 pub struct State {
@@ -430,6 +504,7 @@ impl State {
 
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
+        patches::patch_mod_keys(ctx);
         match self.run_state {
             RunState::PreRun
             | RunState::AwaitingInput { .. }
@@ -552,14 +627,30 @@ impl GameState for State {
                         MapAction::Interact => {
                             RunState::InteractiveEntityTargeting { target_idx: 0 }
                         }
-                        MapAction::MoveLeft => handle_default_move(&mut self.world, -1, 0),
-                        MapAction::MoveRight => handle_default_move(&mut self.world, 1, 0),
-                        MapAction::MoveUp => handle_default_move(&mut self.world, 0, -1),
-                        MapAction::MoveDown => handle_default_move(&mut self.world, 0, 1),
-                        MapAction::MoveUpLeft => handle_default_move(&mut self.world, -1, -1),
-                        MapAction::MoveUpRight => handle_default_move(&mut self.world, 1, -1),
-                        MapAction::MoveDownLeft => handle_default_move(&mut self.world, -1, 1),
-                        MapAction::MoveDownRight => handle_default_move(&mut self.world, 1, 1),
+                        MapAction::MoveLeft => handle_move(&mut self.world, -1, 0),
+                        MapAction::MoveRight => handle_move(&mut self.world, 1, 0),
+                        MapAction::MoveUp => handle_move(&mut self.world, 0, -1),
+                        MapAction::MoveDown => handle_move(&mut self.world, 0, 1),
+                        MapAction::MoveUpLeft => handle_move(&mut self.world, -1, -1),
+                        MapAction::MoveUpRight => handle_move(&mut self.world, 1, -1),
+                        MapAction::MoveDownLeft => handle_move(&mut self.world, -1, 1),
+                        MapAction::MoveDownRight => handle_move(&mut self.world, 1, 1),
+                        MapAction::ActLeft => handle_act(&mut self.world, -1, 0),
+                        MapAction::ActRight => handle_act(&mut self.world, 1, 0),
+                        MapAction::ActUp => handle_act(&mut self.world, 0, -1),
+                        MapAction::ActDown => handle_act(&mut self.world, 0, 1),
+                        MapAction::ActUpLeft => handle_act(&mut self.world, -1, -1),
+                        MapAction::ActUpRight => handle_act(&mut self.world, 1, -1),
+                        MapAction::ActDownLeft => handle_act(&mut self.world, -1, 1),
+                        MapAction::ActDownRight => handle_act(&mut self.world, 1, 1),
+                        MapAction::AutoActLeft => handle_auto_act(&mut self.world, -1, 0),
+                        MapAction::AutoActRight => handle_auto_act(&mut self.world, 1, 0),
+                        MapAction::AutoActUp => handle_auto_act(&mut self.world, 0, -1),
+                        MapAction::AutoActDown => handle_auto_act(&mut self.world, 0, 1),
+                        MapAction::AutoActUpLeft => handle_auto_act(&mut self.world, -1, -1),
+                        MapAction::AutoActUpRight => handle_auto_act(&mut self.world, 1, -1),
+                        MapAction::AutoActDownLeft => handle_auto_act(&mut self.world, -1, 1),
+                        MapAction::AutoActDownRight => handle_auto_act(&mut self.world, 1, 1),
                         MapAction::StayStill => RunState::PlayerTurn,
                         MapAction::SearchHidden => {
                             player::search_hidden(&mut self.world);
@@ -589,30 +680,22 @@ impl GameState for State {
                                 | InteractionType::CloseDoor(e)
                                 | InteractionType::OpenContainer(e) => {
                                     let positions = self.world.read_storage::<Position>();
-                                    positions.get(e).unwrap().idx
+                                    Some(positions.get(e).unwrap().idx)
                                 }
                                 InteractionType::GoUp(idx)
                                 | InteractionType::GoDown(idx)
                                 | InteractionType::Move(idx)
-                                | InteractionType::Exit(idx) => idx,
+                                | InteractionType::Exit(idx) => Some(idx),
+                                _ => None,
                             };
-                            let path = {
-                                let player_entity = self.world.fetch::<Entity>();
-                                let positions = self.world.read_storage::<Position>();
-
-                                let player_position = positions.get(*player_entity).unwrap();
-                                let dungeon = self.world.fetch::<Dungeon>();
-                                let level = dungeon.get_level(player_position.level).unwrap();
-                                // this should be updated to only search tiles that the player has seen.
-                                a_star_search(
-                                    player_position.idx as i32,
-                                    interaction_idx as i32,
-                                    level,
-                                )
-                            };
-                            let step_count = path.steps.len();
-                            if path.success {
-                                if step_count > 2 {
+                            
+                            if let Some(interaction_idx) = interaction_idx {
+                                let path = {
+                                    get_player_path_to_target(&self.world, interaction_idx)
+                                };
+                                if !path.success {
+                                    self.queued_action = None
+                                } else if path.steps.len() > 2 {
                                     let next_index = path.steps[1];
                                     player::move_to_position(&mut self.world, next_index);
                                     next_state = RunState::PlayerTurn;
@@ -897,6 +980,99 @@ impl GameState for State {
                     None => RunState::ItemUseTargeting {
                         range: *range,
                         item: *item,
+                    },
+                }
+            }
+            RunState::InteractAtIdx {
+                idx,
+                target_menu_idx,
+                interaction_menu_idx,
+                interaction_menu_active,
+            } => {
+                let targets = get_interaction_targets_at_idx(&self.world, *idx);
+                let target_menu = get_menu_from_ents(&self.world, &targets, *target_menu_idx);
+                let target = targets[*target_menu_idx];
+                let options: Vec<InteractionType> =
+                    get_interaction_options_for_target(&self.world, target);
+                let interaction_menu: Menu<&str> =
+                    get_menu_from_interaction_options(*interaction_menu_idx, &options);
+                let interaction_description = options[*interaction_menu_idx].descriptive_text();
+                ScreenMapNestedMenu::new(
+                    target_menu.get_page_at_index(*target_menu_idx),
+                    interaction_menu.get_page_at_index(*interaction_menu_idx),
+                    *interaction_menu_active,
+                    interaction_description,
+                    "Interact",
+                    "Use arrow keys to navigate menu, Enter to select interaction",
+                )
+                .draw(ctx, &mut self.world);
+                match self
+                    .settings
+                    .control_scheme
+                    .menu
+                    .get_value_with_context(ctx)
+                {
+                    Some(action) => match action {
+                        MenuAction::MoveHighlightNext => RunState::InteractAtIdx {
+                            idx: *idx,
+                            target_menu_idx: match interaction_menu_active {
+                                true => *target_menu_idx,
+                                false => target_menu.get_next_index(*target_menu_idx),
+                            },
+                            interaction_menu_idx: match interaction_menu_active {
+                                true => interaction_menu.get_next_index(*interaction_menu_idx),
+                                false => *interaction_menu_idx,
+                            },
+                            interaction_menu_active: *interaction_menu_active,
+                        },
+                        MenuAction::MoveHighlightPrev => RunState::InteractAtIdx {
+                            idx: *idx,
+                            target_menu_idx: match interaction_menu_active {
+                                true => *target_menu_idx,
+                                false => target_menu.get_previous_index(*target_menu_idx),
+                            },
+                            interaction_menu_idx: match interaction_menu_active {
+                                true => interaction_menu.get_next_index(*interaction_menu_idx),
+                                false => *interaction_menu_idx,
+                            },
+                            interaction_menu_active: *interaction_menu_active,
+                        },
+                        MenuAction::Exit => RunState::AwaitingInput {
+                            offset_x: 0,
+                            offset_y: 0,
+                        },
+                        MenuAction::Select => match options[*interaction_menu_idx] {
+                            InteractionType::OpenContainer(container) => {
+                                RunState::OpenContainerMenu {
+                                    highlighted: 0,
+                                    container,
+                                }
+                            }
+                            _ => {
+                                player::interact(&mut self.world, options[*interaction_menu_idx]);
+                                RunState::PlayerTurn
+                            }
+                        },
+                        MenuAction::NextMenu | MenuAction::PreviousMenu => {
+                            RunState::InteractAtIdx {
+                                target_menu_idx: *target_menu_idx,
+                                interaction_menu_idx: *interaction_menu_idx,
+                                interaction_menu_active: !*interaction_menu_active,
+                                idx: *idx,
+                            }
+                        }
+                        _ => RunState::InteractAtIdx {
+                            target_menu_idx: *target_menu_idx,
+                            interaction_menu_idx: *interaction_menu_idx,
+                            interaction_menu_active: *interaction_menu_active,
+                            idx: *idx,
+                        },
+                    },
+                    None => RunState::InteractAtIdx {
+                        target_menu_idx: *target_menu_idx,
+                        interaction_menu_idx: *interaction_menu_idx,
+                        interaction_menu_active: *interaction_menu_active,
+                        idx: *idx,
                     },
                 }
             }
@@ -1451,7 +1627,7 @@ impl GameState for State {
                     .collect();
                 let menu = Menu::new(menu_options, 10);
                 let submenu = Menu::new(submenu_options, 10);
-                ScreenMapItemMenu::new(
+                ScreenMapNestedMenu::new(
                     menu.get_page_at_index(*highlighted),
                     submenu.get_page_at_index(*action_highlighted),
                     *action_menu,

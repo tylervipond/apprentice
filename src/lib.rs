@@ -7,6 +7,7 @@ mod ai;
 mod artwork;
 mod components;
 mod control;
+mod patches;
 mod copy;
 #[cfg(debug_assertions)]
 mod debug;
@@ -30,6 +31,7 @@ mod ui_components;
 mod user_actions;
 mod utils;
 mod world_utils;
+mod interaction_type;
 
 use run_state::RunState;
 use screens::{SCREEN_HEIGHT, SCREEN_WIDTH};
