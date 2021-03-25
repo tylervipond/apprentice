@@ -12,6 +12,7 @@ use crate::{
     interaction_type::InteractionType,
     inventory,
     menu::{Menu, MenuOption, MenuOptionState},
+    music::Music,
     patches, persistence, player, ranged,
     run_state::{RunState, TargetIntent},
     screens::{
@@ -40,14 +41,13 @@ use crate::{
     },
     utils, world_utils,
 };
-use rltk::{GameState, NavigationPath, RandomNumberGenerator, Rltk, a_star_search};
+use rltk::{a_star_search, GameState, NavigationPath, RandomNumberGenerator, Rltk};
 use specs::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     iter,
     iter::FromIterator,
     iter::IntoIterator,
-    path::Path,
 };
 
 fn player_can_leave_dungeon(world: &mut World) -> bool {
@@ -392,6 +392,7 @@ pub struct State {
     pub run_state: RunState,
     pub queued_action: Option<InteractionType>,
     pub settings: Settings,
+    pub music: Music,
 }
 
 impl State {
@@ -531,7 +532,10 @@ impl GameState for State {
                     Some(action) => match action {
                         #[cfg(debug_assertions)]
                         MapAction::ShowDebugMenu => RunState::DebugMenu { highlighted: 0 },
-                        MapAction::Exit => RunState::SavingScreen { count_down: 15 },
+                        MapAction::Exit => {
+                            self.music.pause_music();
+                            RunState::SavingScreen { count_down: 15 }
+                        }
                         MapAction::ShowInventoryMenu => RunState::InventoryMenu { highlighted: 0 },
                         MapAction::ShowDropMenu => RunState::DropItemMenu { highlighted: 0 },
                         MapAction::ShowEquipmentMenu => RunState::EquipmentMenu {
@@ -541,7 +545,10 @@ impl GameState for State {
                         },
                         MapAction::LeaveDungeon => {
                             match player_can_leave_dungeon(&mut self.world) {
-                                true => RunState::ExitGameMenu { highlighted: 0 },
+                                true => {
+                                    self.music.pause_music();
+                                    RunState::ExitGameMenu { highlighted: 0 }
+                                }
                                 false => {
                                     let mut log = self.world.fetch_mut::<GameLog>();
                                     log.add(
@@ -688,11 +695,10 @@ impl GameState for State {
                                 | InteractionType::Exit(idx) => Some(idx),
                                 _ => None,
                             };
-                            
+
                             if let Some(interaction_idx) = interaction_idx {
-                                let path = {
-                                    get_player_path_to_target(&self.world, interaction_idx)
-                                };
+                                let path =
+                                    { get_player_path_to_target(&self.world, interaction_idx) };
                                 if !path.success {
                                     self.queued_action = None
                                 } else if path.steps.len() > 2 {
@@ -1713,7 +1719,10 @@ impl GameState for State {
                 {
                     Some(action) => match action {
                         StaticAction::Exit => RunState::MainMenu { highlighted: 0 },
-                        StaticAction::Continue => RunState::PreRun,
+                        StaticAction::Continue => {
+                            self.music.play_music();
+                            RunState::PreRun
+                        }
                     },
                     None => RunState::IntroScreen,
                 }
@@ -1787,6 +1796,7 @@ impl GameState for State {
                     _ => {
                         persistence::load_game(&mut self.world);
                         persistence::delete_save();
+                        self.music.play_music();
                         RunState::AwaitingInput {
                             offset_x: 0,
                             offset_y: 0,

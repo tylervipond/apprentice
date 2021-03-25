@@ -15,6 +15,7 @@ path = "src/main.rs"
 
 [profile.release]
 lto = true
+debug = true
 
 [dependencies]
 rltk = { version = "0.8.0", features = ["serde"] }
@@ -27,9 +28,14 @@ stamp-rs = { git= "https://github.com/tylervipond/stamp-rs", version= "0.4.6", f
 ron = "*"
 winit = { version = "0.22.0", features=["web-sys", "serde"]}
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rodio = "0.13.0"
+
 [dependencies.web-sys]
-version = "0.3.4"
+version = "0.3.49"
 features = [
   'Window',
-  'Storage'
+  'Storage',
+  'HtmlAudioElement',
+  'HtmlMediaElement'
 ]
