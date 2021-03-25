@@ -25,7 +25,7 @@ module.exports = {
         }),
         new CopyPlugin({
             patterns: [
-                {from: 'resources', to: 'dist/resources'}
+                {from: 'resources', to: 'resources'}
             ]
         })
     ],
