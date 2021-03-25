@@ -32,11 +32,13 @@ mod user_actions;
 mod utils;
 mod world_utils;
 mod interaction_type;
+mod music;
 
 use run_state::RunState;
 use screens::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use settings::Settings;
 use state::State;
+use music::Music;
 
 #[wasm_bindgen]
 pub fn start() {
@@ -45,6 +47,7 @@ pub fn start() {
         run_state: RunState::MainMenu { highlighted: 0 },
         queued_action: None,
         settings: Settings::load(),
+        music: Music::new(),
     };
     let context = RltkBuilder::simple(SCREEN_WIDTH, SCREEN_HEIGHT)
         .unwrap()
