@@ -22,20 +22,7 @@ use specs::{
     world::Builder,
     Entity, World, WorldExt,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use std::fs::{read_to_string, remove_file, File};
 use std::io::Write;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::Path;
-use std::str;
-#[cfg(target_arch = "wasm32")]
-use web_sys::Storage;
-
-#[cfg(not(target_arch = "wasm32"))]
-const SAVE_FILE_PATH: &str = "./tell-lands-save.json";
-
-#[cfg(target_arch = "wasm32")]
-const SAVE_FILE_PATH: &str = "tell-lands-save";
 
 macro_rules! serialize_individually {
   ($world:expr, $ser:expr, $data:expr, $( $type:ty),*) => {
@@ -88,7 +75,7 @@ fn delete_helpers(world: &mut World) {
         .expect("Delete Helpers Failed");
 }
 
-fn save_game_with_writer<T: Write>(world: &mut World, writer: T) -> serde_json::Serializer<T> {
+pub fn save_game_with_writer<T: Write>(world: &mut World, writer: T) -> serde_json::Serializer<T> {
     create_save_game_helpers(world);
 
     let mut serializer = serde_json::Serializer::new(writer);
@@ -249,87 +236,10 @@ fn populate_player(world: &mut World) {
     world.insert(player_ent);
 }
 
-fn load_game_from_string(world: &mut World, game_string: String) {
+pub fn load_game_from_string(world: &mut World, game_string: String) {
     world.delete_all();
     deserialize_from_string(world, game_string);
     populate_map_from_helper(world);
     delete_helpers(world);
     populate_player(world);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn load_game(world: &mut World) {
-    let game_string = read_to_string(SAVE_FILE_PATH).unwrap();
-    load_game_from_string(world, game_string);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn has_save_game() -> bool {
-    Path::new(SAVE_FILE_PATH).exists()
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn delete_save() {
-    if has_save_game() {
-        remove_file(SAVE_FILE_PATH).expect("unable to delete save file")
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn save_game(world: &mut World) {
-    let writer = File::create(SAVE_FILE_PATH).unwrap();
-    save_game_with_writer(world, writer);
-}
-
-#[cfg(target_arch = "wasm32")]
-fn get_local_storage() -> Storage {
-    let window = web_sys::window().expect("no global `window` exists");
-    window.local_storage().unwrap().expect("no local storage")
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn save_game(world: &mut World) {
-    let writer = Vec::<u8>::new();
-    let serializer = save_game_with_writer(world, writer);
-    let storage = get_local_storage();
-    storage
-        .set_item(
-            SAVE_FILE_PATH,
-            str::from_utf8(&serializer.into_inner()).unwrap(),
-        )
-        .expect("could not write to local storage");
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn delete_save() {
-    if has_save_game() {
-        let storage = get_local_storage();
-        storage
-            .remove_item(SAVE_FILE_PATH)
-            .expect("couldn't delete file");
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn load_game(world: &mut World) {
-    let storage = get_local_storage();
-    match storage.get_item(SAVE_FILE_PATH) {
-        Ok(r) => match r {
-            Some(game_string) => load_game_from_string(world, game_string),
-            _ => (),
-        },
-        _ => (),
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn has_save_game() -> bool {
-    let storage = get_local_storage();
-    match storage.get_item(SAVE_FILE_PATH) {
-        Ok(r) => match r {
-            Some(_) => true,
-            _ => false,
-        },
-        _ => false,
-    }
 }

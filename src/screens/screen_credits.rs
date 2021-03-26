@@ -26,10 +26,12 @@ impl ScreenCredits {
         ctx.cls();
         create_credit_line(5, "Artwork By").draw(ctx);
         create_credit_line(6, "Cameron Stott").draw(ctx);
-        create_credit_line(8, "Code By").draw(ctx);
-        create_credit_line(9, "Alex Eagleson").draw(ctx);
-        create_credit_line(10, "Tyler Vipond").draw(ctx);
-        create_credit_line(12, "Created By").draw(ctx);
+        create_credit_line(8, "Music By").draw(ctx);
+        create_credit_line(9, "Cameron Stott").draw(ctx);
+        create_credit_line(11, "Code By").draw(ctx);
+        create_credit_line(12, "Alex Eagleson").draw(ctx);
         create_credit_line(13, "Tyler Vipond").draw(ctx);
+        create_credit_line(15, "Created By").draw(ctx);
+        create_credit_line(16, "Tyler Vipond").draw(ctx);
     }
 }
