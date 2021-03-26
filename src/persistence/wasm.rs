@@ -26,7 +26,8 @@ pub fn save_game(world: &mut World) {
     let mut save_str = String::from(save_str);
     let save_size = save_str.chars().count() / SAVE_PARTS_COUNT;
     for i in 0..=SAVE_PARTS_COUNT {
-        let value: String = save_str.drain(0..save_size).collect();
+        let amount_to_drain = usize::min(save_str.chars().count(), save_size);
+        let value: String = save_str.drain(0..amount_to_drain).collect();
         let key = get_save_path(i);
         storage
             .set_item(&key, &value)
