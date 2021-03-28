@@ -45,14 +45,14 @@ impl<'a> System<'a> for MoveSystem {
                 (pos.idx, pos.level)
             };
             let level = dungeon.get_level_mut(ent_level).unwrap();
-            let delta = wants_to_move.idx - ent_idx;
+            let delta = wants_to_move.idx as i32 - ent_idx as i32;
             let ent_destination_idx = wants_to_move.idx;
             if let Some(grabbing) = grabbing {
                 let mut thing_pos = positions.get_mut(grabbing.thing).unwrap();
-                let thing_destination_idx = thing_pos.idx + delta;
-                let thing_destination_is_ent_position = thing_destination_idx == ent_idx;
+                let thing_destination_idx = thing_pos.idx as i32 + delta;
+                let thing_destination_is_ent_position = thing_destination_idx == ent_idx as i32;
                 let thing_destination_is_blocked =
-                    level_utils::tile_is_blocked(thing_destination_idx, &level)
+                    level_utils::tile_is_blocked(thing_destination_idx as usize, &level)
                         && !thing_destination_is_ent_position;
                 let thing_current_idx = thing_pos.idx;
                 let ent_destination_is_thing_position = ent_destination_idx == thing_current_idx;
@@ -60,10 +60,10 @@ impl<'a> System<'a> for MoveSystem {
                     level_utils::tile_is_blocked(ent_destination_idx, &level)
                         && !ent_destination_is_thing_position;
                 if !thing_destination_is_blocked && !ent_destination_is_blocked {
-                    thing_pos.idx = thing_destination_idx;
+                    thing_pos.idx = thing_destination_idx as usize;
                     if let Some(_) = blocks_tiles.get(grabbing.thing) {
                         level.blocked[thing_current_idx] = false;
-                        level.blocked[thing_destination_idx] = true;
+                        level.blocked[thing_destination_idx as usize] = true;
                     }
                 }
             }
