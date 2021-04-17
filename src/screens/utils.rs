@@ -35,19 +35,17 @@ pub fn get_render_data(world: &World) -> Vec<RenderData> {
                 Some(_) => *entity != *player_ent,
                 _ => false,
             };
-            return p.level == player_level
-                && player_viewshed.visible_tiles.contains(&p.idx)
-                && is_visible
-                && !hiding;
+            return p.level == player_level && is_visible && !hiding
+                && player_viewshed.visible_tiles.contains(&p.idx);
         })
         .map(|(p, r, f, _h, hiding, entity)| {
-            let mut fg = r.fg;
-            if f.is_some() {
-                fg = RGB::named(ORANGE);
-            }
-            if hiding.is_some() && entity == *player_ent {
-                fg = RGB::named(GREY);
-            }
+            let mut fg = if hiding.is_some() && entity == *player_ent {
+                RGB::named(GREY)
+            } else if f.is_some() {
+                RGB::named(ORANGE)
+            } else {
+                r.fg
+            };
             RenderData {
                 idx: p.idx,
                 fg,

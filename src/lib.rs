@@ -33,6 +33,7 @@ mod utils;
 mod world_utils;
 mod interaction_type;
 mod music;
+// mod states;
 
 use run_state::RunState;
 use screens::{SCREEN_HEIGHT, SCREEN_WIDTH};
@@ -53,6 +54,7 @@ pub fn start() {
         .unwrap()
         .with_title("Apprentice")
         .with_advanced_input(true)
+        .with_fullscreen(false)
         .build()
         .expect("failed to create context");
     rltk::main_loop(context, gs).expect("failed to start apprentice");
