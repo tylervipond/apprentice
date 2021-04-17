@@ -5,7 +5,7 @@ pub struct Music {
 
 impl Music {
     pub fn new() -> Self {
-        let mut audio = HtmlAudioElement::new_with_src("resources/dungeon_music.mp3").expect("couldn't create music");
+        let mut audio = HtmlAudioElement::new_with_src("resources/dungeon_music_r1.mp3").expect("couldn't create music");
         audio.set_loop(true);
         Self {
             audio
