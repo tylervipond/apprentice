@@ -11,7 +11,7 @@ impl Music {
     pub fn new() -> Self {
         let (stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
-        let file = File::open("resources/dungeon_music.mp3").unwrap();
+        let file = File::open("resources/dungeon_music_r1.mp3").unwrap();
         let source = rodio::Decoder::new(BufReader::new(file))
             .unwrap()
             .repeat_infinite();
