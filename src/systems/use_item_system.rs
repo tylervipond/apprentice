@@ -1,7 +1,7 @@
 use crate::components::{
     AreaOfEffect, CausesDamage, CausesFire, CausesLight, CombatStats, Confused, Confusion,
-    Consumable, DamageHistory, Flammable, Name, OnFire, Position, ProvidesHealing, SufferDamage,
-    WantsToUse, Inventory
+    Consumable, DamageHistory, Flammable, Inventory, Name, OnFire, Position, ProvidesHealing,
+    SufferDamage, WantsToUse,
 };
 use crate::dungeon::{dungeon::Dungeon, level_utils};
 use crate::services::{GameLog, ParticleEffectSpawner};
@@ -128,8 +128,9 @@ impl<'a> System<'a> for UseItemSystem {
                             )
                             .expect("couldn't insert cause light for target");
                     }
-                } else if let Some(damages) = damages {
-                    if combat_stats.get(target).is_some() {
+                }
+                if let Some(stats) = combat_stats.get_mut(target) {
+                    if let Some(damages) = damages {
                         let damage = rng.range(damages.min, damages.max) + damages.bonus;
                         if let Some(suffer_damage) = suffer_damage.get_mut_or_default(target) {
                             suffer_damage.amount += damage;
@@ -146,7 +147,8 @@ impl<'a> System<'a> for UseItemSystem {
                             200.0,
                             pos.level,
                         );
-                        if entity == *player_entity {
+                        let ent_is_player = entity == *player_entity;
+                        if ent_is_player {
                             if let Some(mob_name) = names.get(target) {
                                 let item_name = names.get(to_use.item).unwrap();
                                 game_log.add(format!(
@@ -155,67 +157,62 @@ impl<'a> System<'a> for UseItemSystem {
                                 ));
                             }
                         }
-                    }
-                }
-                if combat_stats.get(target).is_some() {
-                    if let Some(heals) = heals {
-                        if let Some(stats) = combat_stats.get_mut(target) {
+                        if let Some(heals) = heals {
                             stats.hp = i32::min(stats.max_hp, stats.hp + heals.amount);
+                            particle_spawner.request(
+                                pos.idx,
+                                RGB::named(RED),
+                                RGB::named(BLACK),
+                                rltk::to_cp437('♥'),
+                                200.0,
+                                pos.level,
+                            );
+                            if ent_is_player {
+                                game_log.add(format!(
+                                    "You use the {}, healing {} hp.",
+                                    names.get(to_use.item).unwrap().name,
+                                    heals.amount
+                                ));
+                            }
                         }
-                        particle_spawner.request(
-                            pos.idx,
-                            RGB::named(RED),
-                            RGB::named(BLACK),
-                            rltk::to_cp437('♥'),
-                            200.0,
-                            pos.level,
-                        );
-                        if entity == *player_entity {
-                            game_log.add(format!(
-                                "You use the {}, healing {} hp.",
-                                names.get(to_use.item).unwrap().name,
-                                heals.amount
-                            ));
-                        }
-                    }
 
-                    if let Some(confuses) = confuses {
-                        is_confused
-                            .insert(
-                                target,
-                                Confused {
-                                    turns: confuses.turns,
-                                },
-                            )
-                            .expect("Failed to confuse target");
-                        particle_spawner.request(
-                            pos.idx,
-                            RGB::named(MAGENTA),
-                            RGB::named(BLACK),
-                            rltk::to_cp437('?'),
-                            200.0,
-                            pos.level,
-                        );
-                        if entity == *player_entity {
-                            let mob_name = names.get(target).unwrap();
-                            let item_name = names.get(to_use.item).unwrap();
-                            game_log.add(format!(
-                                "you use {} on {}, confusing them.",
-                                item_name.name, mob_name.name,
-                            ));
-                        }
-                        if target == *player_entity {
-                            let mob_name = names.get(entity).unwrap();
-                            let item_name = names.get(to_use.item).unwrap();
-                            game_log.add(format!(
-                                "{} uses {} on you, you are confused.",
-                                item_name.name, mob_name.name,
-                            ));
+                        if let Some(confuses) = confuses {
+                            is_confused
+                                .insert(
+                                    target,
+                                    Confused {
+                                        turns: confuses.turns,
+                                    },
+                                )
+                                .expect("Failed to confuse target");
+                            particle_spawner.request(
+                                pos.idx,
+                                RGB::named(MAGENTA),
+                                RGB::named(BLACK),
+                                rltk::to_cp437('?'),
+                                200.0,
+                                pos.level,
+                            );
+                            if ent_is_player {
+                                let mob_name = names.get(target).unwrap();
+                                let item_name = names.get(to_use.item).unwrap();
+                                game_log.add(format!(
+                                    "you use {} on {}, confusing them.",
+                                    item_name.name, mob_name.name,
+                                ));
+                            }
+                            if target == *player_entity {
+                                let mob_name = names.get(entity).unwrap();
+                                let item_name = names.get(to_use.item).unwrap();
+                                game_log.add(format!(
+                                    "{} uses {} on you, you are confused.",
+                                    item_name.name, mob_name.name,
+                                ));
+                            }
                         }
                     }
                 }
             }
-
             if let Some(_) = consumables.get(to_use.item) {
                 inventory.items.remove(&to_use.item);
                 entities.delete(to_use.item).expect("Delete Failed");
