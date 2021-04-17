@@ -1,4 +1,5 @@
-use specs::{Component, DenseVecStorage};
+use specs::{Component, NullStorage};
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, Default)]
+#[storage(NullStorage)]
 pub struct WantsToSearchHidden {}

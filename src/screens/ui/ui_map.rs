@@ -151,6 +151,8 @@ impl<'a> UIMap<'a> {
                 )
             }
         }
+        // since we're just going to reset the context, it seems a shame we did the above
+        // `work
         for r in self.renderables.iter() {
             let (x, y) = level_utils::idx_xy(self.level.width as u32, r.idx);
             ctx.set(
