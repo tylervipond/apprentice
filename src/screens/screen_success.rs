@@ -20,7 +20,7 @@ impl ScreenSuccess {
         let text = "\"Finally, the talisman is within my grasp, you have passed your final challenge as my apprentice. What magnificent adventures await you\"";
         UIParagraph::new(
             SCREEN_PADDING as i32,
-            55,
+            57,
             (SCREEN_WIDTH - SCREEN_PADDING * 2) as u32,
             text,
         )

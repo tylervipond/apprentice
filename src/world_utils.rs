@@ -1,7 +1,7 @@
 use crate::{
     components::{
         AreaOfEffect, Armable, BlocksTile, Blood, CausesDamage, CausesFire, CausesLight,
-        CombatStats, Confused, Confusion, Consumable, Container, DamageHistory, Disarmable, Door,
+        CombatStats, Paralyzed, Paralyze, Consumable, Container, DamageHistory, Disarmable, Door,
         Dousable, EntityMoved, EntryTrigger, Equipable, Equipment, Flammable, Furniture, Grabbable,
         Grabbing, Hidden, Hiding, HidingSpot, Info, Inventory, Item, Lightable, Memory, Monster,
         Name, Objective, OnFire, ParticleLifetime, Player, Position, Potion, ProvidesHealing,
@@ -38,8 +38,8 @@ pub fn initialize_new_game(world: &mut World) {
     world.write_storage::<Consumable>().clear();
     world.write_storage::<Ranged>().clear();
     world.write_storage::<AreaOfEffect>().clear();
-    world.write_storage::<Confusion>().clear();
-    world.write_storage::<Confused>().clear();
+    world.write_storage::<Paralyze>().clear();
+    world.write_storage::<Paralyzed>().clear();
     world.write_storage::<SimpleMarker<Saveable>>().clear();
     world.write_storage::<SerializationHelper>().clear();
     world.write_storage::<Blood>().clear();
@@ -102,8 +102,8 @@ pub fn get_world() -> World {
     world.register::<Consumable>();
     world.register::<Ranged>();
     world.register::<AreaOfEffect>();
-    world.register::<Confusion>();
-    world.register::<Confused>();
+    world.register::<Paralyze>();
+    world.register::<Paralyzed>();
     world.register::<SimpleMarker<Saveable>>();
     world.register::<SerializationHelper>();
     world.register::<Blood>();

@@ -3,7 +3,7 @@ use crate::components::{
     monster::MonsterSpecies, Armable, DamageHistory, Disarmable, Door, Inventory, Lightable,
 };
 use crate::components::{
-    AreaOfEffect, BlocksTile, CausesDamage, CausesFire, CausesLight, CombatStats, Confusion,
+    AreaOfEffect, BlocksTile, CausesDamage, CausesFire, CausesLight, CombatStats, Paralyze,
     Consumable, Container, Dousable, EntryTrigger, Equipable, Equipment, Flammable, Furniture,
     Grabbable, Hidden, HidingSpot, Info, Item, Memory, Monster, Name, Objective, Player, Position,
     ProvidesHealing, Ranged, Renderable, Saveable, SingleActivation, Trap, Viewshed,
@@ -387,10 +387,10 @@ fn spawn_fireball_scroll(world: &mut World) -> Entity {
     make_entity_fireball_scroll(create_marked_entity(world)).build()
 }
 
-fn make_entity_confusion_scroll<'a>(builder: EntityBuilder<'a>) -> EntityBuilder<'a> {
+fn make_entity_paralyze_scroll<'a>(builder: EntityBuilder<'a>) -> EntityBuilder<'a> {
     builder
         .with(Name {
-            name: "Scroll of Confusion".to_string(),
+            name: "Scroll of Paralyze".to_string(),
         })
         .with(Renderable {
             glyph: to_cp437(')'),
@@ -401,15 +401,15 @@ fn make_entity_confusion_scroll<'a>(builder: EntityBuilder<'a>) -> EntityBuilder
         .with(Item {})
         .with(Consumable {})
         .with(Ranged { range: 6 })
-        .with(Confusion { turns: 4 })
+        .with(Paralyze { turns: 4 })
 }
 
-fn spawn_confusion_scroll_with_position(world: &mut World, idx: usize, level: &Level) -> Entity {
-    make_entity_confusion_scroll(create_marked_entity_with_position(world, idx, level)).build()
+fn spawn_paralyze_scroll_with_position(world: &mut World, idx: usize, level: &Level) -> Entity {
+    make_entity_paralyze_scroll(create_marked_entity_with_position(world, idx, level)).build()
 }
 
-fn spawn_confusion_scroll(world: &mut World) -> Entity {
-    make_entity_confusion_scroll(create_marked_entity(world)).build()
+fn spawn_paralyze_scroll(world: &mut World) -> Entity {
+    make_entity_paralyze_scroll(create_marked_entity(world)).build()
 }
 
 fn make_entity_bear_trap<'a>(builder: EntityBuilder<'a>) -> EntityBuilder<'a> {
@@ -580,7 +580,7 @@ fn spawn_random_item_with_position(world: &mut World, idx: usize, level: &Level)
     match roll {
         1 | 2 => spawn_health_potion_with_position(world, idx, level),
         3 => spawn_fireball_scroll_with_position(world, idx, level),
-        4 => spawn_confusion_scroll_with_position(world, idx, level),
+        4 => spawn_paralyze_scroll_with_position(world, idx, level),
         5 => spawn_bear_trap_with_position(world, idx, level),
         6 => spawn_caltrops_with_position(world, idx, level),
         _ => spawn_magic_missile_scroll_with_position(world, idx, level),
@@ -592,7 +592,7 @@ fn spawn_random_item(world: &mut World) -> Entity {
     match roll {
         1 | 2 => spawn_health_potion(world),
         3 => spawn_fireball_scroll(world),
-        4 => spawn_confusion_scroll(world),
+        4 => spawn_paralyze_scroll(world),
         5 => spawn_bear_trap(world),
         6 => spawn_caltrops(world),
         _ => spawn_magic_missile_scroll(world),

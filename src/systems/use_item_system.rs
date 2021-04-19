@@ -1,6 +1,6 @@
 use crate::components::{
-    AreaOfEffect, CausesDamage, CausesFire, CausesLight, CombatStats, Confused, Confusion,
-    Consumable, DamageHistory, Flammable, Inventory, Name, OnFire, Position, ProvidesHealing,
+    AreaOfEffect, CausesDamage, CausesFire, CausesLight, CombatStats, Consumable, DamageHistory,
+    Flammable, Inventory, Name, OnFire, Paralyze, Paralyzed, Position, ProvidesHealing,
     SufferDamage, WantsToUse,
 };
 use crate::dungeon::{dungeon::Dungeon, level_utils};
@@ -27,8 +27,8 @@ impl<'a> System<'a> for UseItemSystem {
         WriteStorage<'a, SufferDamage>,
         ReadExpect<'a, Dungeon>,
         ReadStorage<'a, AreaOfEffect>,
-        ReadStorage<'a, Confusion>,
-        WriteStorage<'a, Confused>,
+        ReadStorage<'a, Paralyze>,
+        WriteStorage<'a, Paralyzed>,
         WriteExpect<'a, ParticleEffectSpawner>,
         ReadStorage<'a, Position>,
         ReadStorage<'a, CausesFire>,
@@ -53,8 +53,8 @@ impl<'a> System<'a> for UseItemSystem {
             mut suffer_damage,
             dungeon,
             aoe,
-            causes_confusion,
-            mut is_confused,
+            causes_paralysis,
+            mut is_paralyzed,
             mut particle_spawner,
             positions,
             causes_fire,
@@ -108,7 +108,7 @@ impl<'a> System<'a> for UseItemSystem {
 
             let heals = provides_healing.get(to_use.item);
             let damages = causes_damage.get(to_use.item);
-            let confuses = causes_confusion.get(to_use.item);
+            let paralyze = causes_paralysis.get(to_use.item);
             let burns = causes_fire.get(to_use.item);
             for target in targets {
                 let pos = positions.get(target).unwrap();
@@ -130,6 +130,7 @@ impl<'a> System<'a> for UseItemSystem {
                     }
                 }
                 if let Some(stats) = combat_stats.get_mut(target) {
+                    let ent_is_player = entity == *player_entity;
                     if let Some(damages) = damages {
                         let damage = rng.range(damages.min, damages.max) + damages.bonus;
                         if let Some(suffer_damage) = suffer_damage.get_mut_or_default(target) {
@@ -147,7 +148,6 @@ impl<'a> System<'a> for UseItemSystem {
                             200.0,
                             pos.level,
                         );
-                        let ent_is_player = entity == *player_entity;
                         if ent_is_player {
                             if let Some(mob_name) = names.get(target) {
                                 let item_name = names.get(to_use.item).unwrap();
@@ -157,58 +157,58 @@ impl<'a> System<'a> for UseItemSystem {
                                 ));
                             }
                         }
-                        if let Some(heals) = heals {
-                            stats.hp = i32::min(stats.max_hp, stats.hp + heals.amount);
-                            particle_spawner.request(
-                                pos.idx,
-                                RGB::named(RED),
-                                RGB::named(BLACK),
-                                rltk::to_cp437('♥'),
-                                200.0,
-                                pos.level,
-                            );
-                            if ent_is_player {
-                                game_log.add(format!(
-                                    "You use the {}, healing {} hp.",
-                                    names.get(to_use.item).unwrap().name,
-                                    heals.amount
-                                ));
-                            }
+                    }
+                    if let Some(heals) = heals {
+                        stats.hp = i32::min(stats.max_hp, stats.hp + heals.amount);
+                        particle_spawner.request(
+                            pos.idx,
+                            RGB::named(RED),
+                            RGB::named(BLACK),
+                            rltk::to_cp437('♥'),
+                            200.0,
+                            pos.level,
+                        );
+                        if ent_is_player {
+                            game_log.add(format!(
+                                "You use the {}, healing {} hp.",
+                                names.get(to_use.item).unwrap().name,
+                                heals.amount
+                            ));
                         }
+                    }
 
-                        if let Some(confuses) = confuses {
-                            is_confused
-                                .insert(
-                                    target,
-                                    Confused {
-                                        turns: confuses.turns,
-                                    },
-                                )
-                                .expect("Failed to confuse target");
-                            particle_spawner.request(
-                                pos.idx,
-                                RGB::named(MAGENTA),
-                                RGB::named(BLACK),
-                                rltk::to_cp437('?'),
-                                200.0,
-                                pos.level,
-                            );
-                            if ent_is_player {
-                                let mob_name = names.get(target).unwrap();
-                                let item_name = names.get(to_use.item).unwrap();
-                                game_log.add(format!(
-                                    "you use {} on {}, confusing them.",
-                                    item_name.name, mob_name.name,
-                                ));
-                            }
-                            if target == *player_entity {
-                                let mob_name = names.get(entity).unwrap();
-                                let item_name = names.get(to_use.item).unwrap();
-                                game_log.add(format!(
-                                    "{} uses {} on you, you are confused.",
-                                    item_name.name, mob_name.name,
-                                ));
-                            }
+                    if let Some(paralyze) = paralyze {
+                        is_paralyzed
+                            .insert(
+                                target,
+                                Paralyzed {
+                                    turns: paralyze.turns,
+                                },
+                            )
+                            .expect("Failed to confuse target");
+                        particle_spawner.request(
+                            pos.idx,
+                            RGB::named(MAGENTA),
+                            RGB::named(BLACK),
+                            rltk::to_cp437('?'),
+                            200.0,
+                            pos.level,
+                        );
+                        if ent_is_player {
+                            let mob_name = names.get(target).unwrap();
+                            let item_name = names.get(to_use.item).unwrap();
+                            game_log.add(format!(
+                                "you use {} on {}, confusing them.",
+                                item_name.name, mob_name.name,
+                            ));
+                        }
+                        if target == *player_entity {
+                            let mob_name = names.get(entity).unwrap();
+                            let item_name = names.get(to_use.item).unwrap();
+                            game_log.add(format!(
+                                "{} uses {} on you, you are confused.",
+                                item_name.name, mob_name.name,
+                            ));
                         }
                     }
                 }

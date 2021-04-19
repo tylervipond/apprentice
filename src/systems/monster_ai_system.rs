@@ -1,5 +1,5 @@
 use crate::components::{
-    CombatStats, Confused, Door, Furniture, Hiding, Memory, Monster, Position, Viewshed,
+    CombatStats, Paralyzed, Door, Furniture, Hiding, Memory, Monster, Position, Viewshed,
     WantsToMelee, WantsToMove, WantsToOpenDoor,
 };
 use crate::dungeon::{dungeon::Dungeon, level::Level, level_utils, tile_type::TileType};
@@ -82,7 +82,7 @@ impl<'a> System<'a> for MonsterAI {
         ReadStorage<'a, Position>,
         ReadStorage<'a, Monster>,
         WriteStorage<'a, WantsToMelee>,
-        WriteStorage<'a, Confused>,
+        WriteStorage<'a, Paralyzed>,
         WriteStorage<'a, WantsToMove>,
         ReadStorage<'a, CombatStats>,
         WriteStorage<'a, Memory>,
@@ -103,7 +103,7 @@ impl<'a> System<'a> for MonsterAI {
             positions,
             monsters,
             mut wants_to_melee,
-            mut confused,
+            mut paralyzed,
             mut wants_to_move,
             combat_stats,
             mut memory,
@@ -123,10 +123,10 @@ impl<'a> System<'a> for MonsterAI {
         for (_monsters, entity, viewshed, position, memory) in
             (&monsters, &entities, &viewsheds, &positions, &mut memory).join()
         {
-            if let Some(is_confused) = confused.get_mut(entity) {
-                is_confused.turns -= 1;
-                if is_confused.turns < 1 {
-                    confused.remove(entity);
+            if let Some(is_paralyzed) = paralyzed.get_mut(entity) {
+                is_paralyzed.turns -= 1;
+                if is_paralyzed.turns < 1 {
+                    paralyzed.remove(entity);
                 }
                 continue;
             }

@@ -6,6 +6,6 @@ use specs::{
 };
 
 #[derive(Component, ConvertSaveload, Clone, Debug)]
-pub struct Confusion {
+pub struct Paralyze {
   pub turns: i32,
 }
