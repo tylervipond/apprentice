@@ -7,15 +7,17 @@ mod ai;
 mod artwork;
 mod components;
 mod control;
-mod patches;
 mod copy;
 #[cfg(debug_assertions)]
 mod debug;
 mod dungeon;
 mod entity_option;
 mod entity_set;
+mod interaction_type;
 mod inventory;
 mod menu;
+mod music;
+mod patches;
 mod persistence;
 mod player;
 mod ranged;
@@ -31,15 +33,13 @@ mod ui_components;
 mod user_actions;
 mod utils;
 mod world_utils;
-mod interaction_type;
-mod music;
 // mod states;
 
+use music::Music;
 use run_state::RunState;
 use screens::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use settings::Settings;
 use state::State;
-use music::Music;
 
 #[wasm_bindgen]
 pub fn start() {

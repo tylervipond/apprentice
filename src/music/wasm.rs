@@ -1,21 +1,25 @@
-use web_sys::HtmlAudioElement;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen(module = "/js/audio.js")]
+extern "C" {
+    fn setupAudio();
+    fn playAudio();
+    fn pauseAudio();
+}
+
 pub struct Music {
-    audio: HtmlAudioElement
+    audio: HtmlAudioElement,
 }
 
 impl Music {
     pub fn new() -> Self {
-        let mut audio = HtmlAudioElement::new_with_src("resources/dungeon_music_r1.mp3").expect("couldn't create music");
-        audio.set_loop(true);
-        Self {
-            audio
-        }
+        setupAudio();
     }
 
     pub fn play_music(&mut self) {
-        self.audio.play().expect("couldn't play music");
+        playAudio();
     }
     pub fn pause_music(&mut self) {
-        self.audio.pause().expect("couldn't pause music");
+        pauseAudio();
     }
 }
