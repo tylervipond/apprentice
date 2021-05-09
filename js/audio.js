@@ -8,7 +8,7 @@ export function setupAudio() {
   tracks.forEach(
     (track, index) =>
       (track.onended = () => {
-        trackIndex = tracks.length % (index + 1);
+        trackIndex = index + 1 === tracks.length ? 0 : index + 1;
         tracks[trackIndex].play();
       })
   );

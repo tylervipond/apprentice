@@ -7,13 +7,12 @@ extern "C" {
     fn pauseAudio();
 }
 
-pub struct Music {
-    audio: HtmlAudioElement,
-}
+pub struct Music {}
 
 impl Music {
     pub fn new() -> Self {
         setupAudio();
+        Music {}
     }
 
     pub fn play_music(&mut self) {
