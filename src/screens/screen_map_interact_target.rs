@@ -30,7 +30,7 @@ impl<'a> ScreenMapInteractTarget<'a> {
         let positions = world.read_storage::<Position>();
         let target_position = positions.get(target).unwrap();
         let dungeon = world.fetch::<Dungeon>();
-        let level = dungeon.levels.get(&target_position.level).unwrap();
+        let level = dungeon.get_level(target_position.level).unwrap();
         let render_data = get_render_data(world);
         let (center_x, center_y) = level_utils::idx_xy(level.width as u32, target_position.idx);
         let render_offset = get_render_offset(center_x, center_y);

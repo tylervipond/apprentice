@@ -40,7 +40,7 @@ impl<'a, T: Display + Copy> ScreenMapMenu<'a, T> {
         let viewsheds = world.read_storage::<Viewshed>();
         let player_viewshed = viewsheds.get(*player_ent).unwrap();
         let dungeon = world.fetch::<Dungeon>();
-        let level = dungeon.levels.get(&player_position.level).unwrap();
+        let level = dungeon.get_level(player_position.level).unwrap();
         let render_data = get_render_data(world);
         let positions = world.read_storage::<Position>();
         let player_position = positions.get(*player_ent).unwrap();

@@ -5,13 +5,13 @@
 // to replace the custom macros
 use crate::components::{
     AreaOfEffect, Armable, BlocksTile, Blood, CausesDamage, CausesFire, CausesLight, CombatStats,
-    Paralyze, Consumable, Container, DamageHistory, Disarmable, Door, Dousable, EntityMoved,
-    EntryTrigger, Equipable, Equipment, Flammable, Furniture, Grabbable, Grabbing, Hidden, Hiding,
-    HidingSpot, Info, Inventory, Item, Lightable, Memory, Monster, Name, Objective, OnFire,
+    Consumable, Container, DamageHistory, Disarmable, Door, Dousable, EntityMoved, EntryTrigger,
+    Equipable, Equipment, Flammable, Furniture, Grabbable, Grabbing, Hidden, Hiding, HidingSpot,
+    Info, Inventory, Item, Lightable, Memory, Monster, Name, Objective, OnFire, Paralyze,
     ParticleLifetime, Player, Position, ProvidesHealing, Ranged, Renderable, Saveable,
     SerializationHelper, SingleActivation, SufferDamage, Trap, Triggered, Viewshed,
 };
-use crate::dungeon::{constants::MAP_COUNT, dungeon::Dungeon};
+use crate::dungeon::dungeon::Dungeon;
 use specs::{
     error::NoError,
     join::Join,
@@ -209,8 +209,9 @@ fn get_dungeon(world: &mut World) -> Dungeon {
         .join()
         .map(|h| {
             let mut cloned_dungeon = h.dungeon.clone();
-            for (_i, mut level) in cloned_dungeon.levels.iter_mut() {
-                level.tile_content = vec![Vec::new(); MAP_COUNT];
+            for mut level in cloned_dungeon.levels.iter_mut() {
+                let map_count = level.width * level.height;
+                level.tile_content = (0..map_count).map(|_| vec![]).collect();
             }
             cloned_dungeon
         })

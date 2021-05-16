@@ -1,4 +1,3 @@
-use super::constants::{MAP_COUNT, MAP_HEIGHT, MAP_WIDTH};
 use super::level_utils;
 use super::room::Room;
 use super::tile_type::TileType;
@@ -8,15 +7,15 @@ use specs::Entity;
 
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
 pub struct Level {
-    pub height: u8,
-    pub width: u8,
-    pub tiles: Box<[TileType]>,
+    pub height: usize,
+    pub width: usize,
+    pub tiles: Vec<TileType>,
     pub rooms: Vec<Room>,
-    pub revealed_tiles: Box<[bool]>,
-    pub lit_tiles: Box<[bool]>, // can we skip serializing this?d
-    pub blocked: Box<[bool]>,
-    pub opaque: Box<[bool]>,
-    pub depth: u8,
+    pub revealed_tiles: Vec<bool>,
+    pub lit_tiles: Vec<bool>, // can we skip serializing this?d
+    pub blocked: Vec<bool>,
+    pub opaque: Vec<bool>,
+    pub depth: usize,
     pub stairs_down: Option<usize>,
     pub stairs_up: Option<usize>,
     pub exit: Option<usize>,
@@ -25,17 +24,18 @@ pub struct Level {
 }
 
 impl Level {
-    pub fn new(depth: u8) -> Self {
+    pub fn new(depth: usize, width: usize, height: usize) -> Self {
+        let map_count = width * height;
         Self {
-            tiles: Box::new([TileType::Wall; MAP_COUNT]),
+            tiles: (0..map_count).map(|_| TileType::Wall).collect(),
             rooms: vec![], // TODO: determine if this is useful beyond the level building phase
-            width: MAP_WIDTH,
-            height: MAP_HEIGHT,
-            revealed_tiles: Box::new([false; MAP_COUNT]),
-            lit_tiles: Box::new([false; MAP_COUNT]),
-            blocked: Box::new([false; MAP_COUNT]),
-            opaque: Box::new([false; MAP_COUNT]),
-            tile_content: vec![vec![]; MAP_COUNT],
+            width,
+            height,
+            revealed_tiles: (0..map_count).map(|_| false).collect(),
+            lit_tiles: (0..map_count).map(|_| false).collect(),
+            blocked: (0..map_count).map(|_| false).collect(),
+            opaque: (0..map_count).map(|_| false).collect(),
+            tile_content: (0..map_count).map(|_| vec![]).collect(),
             stairs_down: None,
             stairs_up: None,
             exit: None,

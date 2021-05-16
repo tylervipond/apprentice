@@ -8,7 +8,7 @@ use crate::{
         WantsToDropItem,
     },
     copy,
-    dungeon::{dungeon::Dungeon, level_builders, level_utils, tile_type::TileType},
+    dungeon::{dungeon::Dungeon, level::Level, level_builders, level_utils, tile_type::TileType},
     interaction_type::InteractionType,
     inventory,
     menu::{Menu, MenuOption, MenuOptionState},
@@ -287,22 +287,19 @@ fn intent_to_interaction_type(intent: TargetIntent, target: Entity) -> Interacti
     }
 }
 
-fn generate_dungeon(world: &mut World, levels: u8) -> Dungeon {
-    let levels = (0..levels).fold(HashMap::new(), |mut acc, floor_number| {
-        let is_top_floor = floor_number == levels - 1;
-        let is_bottom_floor = floor_number == 0;
-        let mut level = level_builders::build(floor_number, is_top_floor, is_bottom_floor);
-        spawner::spawn_entities_for_level(world, &mut level);
-        acc.insert(floor_number, level);
-        return acc;
-    });
+fn generate_dungeon(world: &mut World) -> Dungeon {
+    // maybe this does have to be a hashmap...
+    let mut levels = Vec::new();
+    let mut main_level = level_builders::build(0, 256, 256, true, true);
+    spawner::spawn_entities_for_level(world, &mut main_level);
+    levels.push(main_level);
     Dungeon { levels }
 }
 
 fn initialize_new_game(world: &mut World) {
     world_utils::initialize_new_game(world);
-    let dungeon = generate_dungeon(world, 10);
-    let level = dungeon.get_level(9).unwrap();
+    let dungeon = generate_dungeon(world);
+    let level = dungeon.get_level(0).unwrap();
     let (player_idx, _) = level
         .tiles
         .iter()
@@ -313,8 +310,8 @@ fn initialize_new_game(world: &mut World) {
     let player_entity = spawner::spawn_player(world, player_idx, level);
     world.insert(player_entity);
     let rng = world.get_mut::<RandomNumberGenerator>().unwrap();
-    let objective_floor = utils::get_random_between_numbers(rng, 1, 9) as u8;
-    let level = dungeon.get_level(objective_floor).unwrap();
+    // let objective_floor = utils::get_random_between_numbers(rng, 1, 9) as usize;
+    let level = dungeon.get_level(0).unwrap();
     let room_idx = utils::get_random_between_numbers(rng, 0, (level.rooms.len() - 1) as i32);
     let room = level.rooms.get(room_idx as usize).unwrap();
     spawner::spawn_objective_for_room(world, &room.rect, &level);

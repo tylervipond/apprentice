@@ -30,7 +30,7 @@ impl<'a> System<'a> for CloseDoorSystem {
             if let Some(door) = doors.get_mut(intent.door) {
                 door.state = DoorState::Closed;
                 let door_position = positions.get(intent.door).unwrap();
-                let mut level = dungeon.get_level_mut(door_position.level as u8).unwrap();
+                let mut level = dungeon.get_level_mut(door_position.level).unwrap();
                 level_utils::set_tile_to_door(&mut level, door_position.idx);
                 level.blocked[door_position.idx] = true;
                 level.opaque[door_position.idx] = true;

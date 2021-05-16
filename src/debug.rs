@@ -15,9 +15,8 @@ pub fn kill_all_monsters(world: &mut World) {
 
 #[cfg(debug_assertions)]
 pub fn reveal_map(world: &mut World) {
-    use super::dungeon::constants::MAP_COUNT;
     let player_level = utils::get_current_level_from_world(world);
     let mut dungeon = world.fetch_mut::<Dungeon>();
-    let mut level = dungeon.get_level_mut(player_level).unwrap();
-    level.revealed_tiles = Box::new([true; MAP_COUNT])
+    let level = dungeon.get_level_mut(player_level).unwrap();
+    level.revealed_tiles.iter_mut().for_each(|t| *t = true);
 }

@@ -49,7 +49,7 @@ fn generate_rects_for_level(
             rects.remove(random_index as usize);
             rects.push(Rect::new(rect.x1, rect.y1, x - rect.x1, rect.y2 - rect.y1));
             rects.push(Rect::new(x, rect.y1, rect.x2 - x, rect.y2 - rect.y1));
-        } else if height > MIN_ROOM_SIZE * 2 && height > width {
+        } else if height > MIN_ROOM_SIZE * 2 && height >= width {
             let y = cmp::max(
                 rect.y1 + MIN_ROOM_SIZE,
                 rng.range(rect.y1, rect.y2 - MIN_ROOM_SIZE),
@@ -338,10 +338,11 @@ fn add_up_stairs(level: &mut Level, rng: &mut RandomNumberGenerator) {
 }
 
 
-pub fn build(depth: u8, is_top_floor:bool, is_bottom_floor: bool) -> Level {
-    let mut level = Level::new(depth);
+pub fn build(depth: usize, width: usize, height: usize, is_top_floor:bool, is_bottom_floor: bool) -> Level {
+    let mut level = Level::new(depth, width, height);
     let mut rng = RandomNumberGenerator::new();
     let mut rects = generate_rects_for_level(level.width as i32, level.height as i32, &mut rng);
+    dbg!(&rects);
     let room_count = rng.range(2, rects.len() as i32);
     let mut room_rects = get_x_random_elements(&mut rng, room_count as u32, &mut rects);
     room_rects.iter_mut().for_each(|r| match rng.range(0, 6) {

@@ -3,7 +3,7 @@ use specs::Entity;
 
 pub struct TrapSpawnerRequest {
     pub idx: usize,
-    pub level: u8,
+    pub level: usize,
     pub set_by: Entity,
     pub trap_type: TrapType,
 }
@@ -19,7 +19,7 @@ impl TrapSpawner {
         }
     }
 
-    pub fn request(&mut self, idx: usize, level: u8, set_by: Entity, trap_type: TrapType) {
+    pub fn request(&mut self, idx: usize, level: usize, set_by: Entity, trap_type: TrapType) {
         self.requests.push(TrapSpawnerRequest {
             idx,
             level,

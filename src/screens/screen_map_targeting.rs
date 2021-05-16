@@ -31,7 +31,7 @@ impl ScreenMapTargeting {
         let viewsheds = world.read_storage::<Viewshed>();
         let player_viewshed = viewsheds.get(*player_ent).unwrap();
         let dungeon = world.fetch::<Dungeon>();
-        let level = dungeon.levels.get(&player_position.level).unwrap();
+        let level = dungeon.get_level(player_position.level).unwrap();
         let render_data = get_render_data(world);
         let (center_x, center_y) = level_utils::idx_xy(level.width as u32, player_position.idx);
         let render_offset = get_render_offset(center_x, center_y);

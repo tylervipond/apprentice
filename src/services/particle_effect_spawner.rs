@@ -6,7 +6,7 @@ pub struct ParticleEffectSpawnerRequest {
     pub bg: RGB,
     pub glyph: u16,
     pub lifetime: f32,
-    pub level: u8,
+    pub level: usize,
 }
 
 pub struct ParticleEffectSpawner {
@@ -27,7 +27,7 @@ impl ParticleEffectSpawner {
         bg: RGB,
         glyph: u16,
         lifetime: f32,
-        level: u8,
+        level: usize,
     ) {
         self.requests.push(ParticleEffectSpawnerRequest {
             idx,
@@ -39,7 +39,7 @@ impl ParticleEffectSpawner {
         })
     }
 
-    pub fn request_attack_particle(&mut self, idx: usize, level: u8) {
+    pub fn request_attack_particle(&mut self, idx: usize, level: usize) {
         self.request(
             idx,
             RGB::named(ORANGE),
@@ -50,7 +50,7 @@ impl ParticleEffectSpawner {
           );
     }
 
-    pub fn request_search_particle(&mut self, idx: usize, level: u8) {
+    pub fn request_search_particle(&mut self, idx: usize, level: usize) {
         self.request(
             idx,
             RGB::named(BLUE),

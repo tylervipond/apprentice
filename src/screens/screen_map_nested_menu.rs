@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use super::ui::{ui_hud::UIHud, ui_map::UIMap};
 use super::utils::{get_render_data, get_render_offset};
 use crate::components::{CombatStats, Position, Viewshed};
@@ -54,7 +52,7 @@ impl<'a, T: ToString, S: ToString> ScreenMapNestedMenu<'a, T, S> {
         let player_stats = combat_stats.get(*player_ent).unwrap();
 
         let dungeon = world.fetch::<Dungeon>();
-        let level = dungeon.levels.get(&player_position.level).unwrap();
+        let level = dungeon.get_level(player_position.level).unwrap();
         let render_data = get_render_data(world);
         let positions = world.read_storage::<Position>();
         let player_position = positions.get(*player_ent).unwrap();

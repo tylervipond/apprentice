@@ -1,5 +1,5 @@
 use crate::components::{CausesLight, Equipment, Position};
-use crate::dungeon::{constants::MAP_COUNT, dungeon::Dungeon, level_utils};
+use crate::dungeon::{dungeon::Dungeon, level_utils};
 use specs::{Entity, Join, ReadStorage, System, WriteExpect, WriteStorage};
 
 fn get_light_radius_from_equipment(
@@ -29,7 +29,7 @@ impl<'a> System<'a> for LightSystem {
         dungeon
             .levels
             .iter_mut()
-            .for_each(|(_number, level)| level.lit_tiles = Box::new([false; MAP_COUNT]));
+            .for_each(|level| level.lit_tiles.iter_mut().for_each(|t| *t = false));
 
         (&equipment, &position)
             .join()
@@ -48,14 +48,18 @@ impl<'a> System<'a> for LightSystem {
                         off_hand_light_range as i32,
                     )
                 };
-                (light_radius as i32, position.level as u8, position.idx as i32)
+                (light_radius as i32, position.level, position.idx as i32)
             })
             .chain(
                 (&position, &causes_light)
                     .join()
                     .filter(|(_, causes_light)| causes_light.lit)
                     .map(|(position, causes_light)| {
-                        (causes_light.radius as i32, position.level as u8, position.idx as i32)
+                        (
+                            causes_light.radius as i32,
+                            position.level,
+                            position.idx as i32,
+                        )
                     }),
             )
             .for_each(|(radius, level, pos_idx)| {
@@ -68,8 +72,11 @@ impl<'a> System<'a> for LightSystem {
                     })
                     .flatten()
                     .filter(|idx| {
-                        level_utils::get_distance_between_idxs(level, pos_idx as usize, *idx as usize)
-                            < radius as f32
+                        level_utils::get_distance_between_idxs(
+                            level,
+                            pos_idx as usize,
+                            *idx as usize,
+                        ) < radius as f32
                     })
                     .collect::<Vec<i32>>();
                 for index in lit_points {

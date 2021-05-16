@@ -31,7 +31,7 @@ impl ScreenMapGeneric {
         let player_position = positions.get(*player_ent).unwrap();
         let viewsheds = world.read_storage::<Viewshed>();
         let player_viewshed = viewsheds.get(*player_ent).unwrap();
-        let level = dungeon.levels.get(&player_position.level).unwrap();
+        let level = dungeon.get_level(player_position.level).unwrap();
         let level_width = level.width as u32;
         let (center_x, center_y) = level_utils::idx_xy(level_width, player_position.idx);
         let center_x = center_x + self.offset_x;

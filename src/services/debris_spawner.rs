@@ -5,7 +5,7 @@ pub struct DebrisSpawnerRequest {
     pub fg: RGB,
     pub bg: RGB,
     pub glyph: u16,
-    pub level: u8,
+    pub level: usize,
     pub name: String,
     pub flammable: bool
 }
@@ -21,7 +21,7 @@ impl DebrisSpawner {
         }
     }
 
-    pub fn request(&mut self, idx: usize, fg: RGB, bg: RGB, glyph: u16, level: u8, name: String, flammable: bool) {
+    pub fn request(&mut self, idx: usize, fg: RGB, bg: RGB, glyph: u16, level: usize, name: String, flammable: bool) {
         self.requests.push(DebrisSpawnerRequest {
             idx,
             fg,
@@ -33,7 +33,7 @@ impl DebrisSpawner {
         })
     }
 
-    pub fn request_burnt_debris(&mut self, idx: usize, level: u8) {
+    pub fn request_burnt_debris(&mut self, idx: usize, level: usize) {
         self.request(
             idx,
             RGB::named(BLACK),

@@ -7,7 +7,7 @@ pub struct CorpseSpawnerRequest {
     pub fg: RGB,
     pub bg: RGB,
     pub glyph: u16,
-    pub level: u8,
+    pub level: usize,
     pub name: String,
     pub items: EntitySet,
 }
@@ -29,7 +29,7 @@ impl CorpseSpawner {
         fg: RGB,
         bg: RGB,
         glyph: u16,
-        level: u8,
+        level: usize,
         name: String,
         items: EntitySet,
     ) {
@@ -47,7 +47,7 @@ impl CorpseSpawner {
     pub fn request_goblin_corpse(
         &mut self,
         idx: usize,
-        level: u8,
+        level: usize,
         cause_of_death: String,
         items: EntitySet,
     ) {

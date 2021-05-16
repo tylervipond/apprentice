@@ -2,7 +2,7 @@ use crate::types::ItemType;
 
 pub struct ItemSpawnerRequest {
     pub idx: usize,
-    pub level: u8,
+    pub level: usize,
     pub item_type: ItemType,
 }
 
@@ -17,7 +17,7 @@ impl ItemSpawner {
         }
     }
 
-    pub fn request(&mut self, idx: usize, level: u8, item_type: ItemType) {
+    pub fn request(&mut self, idx: usize, level: usize, item_type: ItemType) {
         self.requests.push(ItemSpawnerRequest {
             idx,
             level,
